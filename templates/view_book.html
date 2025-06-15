@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }}{% endblock %}
+
+{% block content %}
+<h2>{{ book.title }}</h2>
+{% if book.cover and book.cover.filename %}
+  <img src="{{ url_for('static', filename='covers/' + book.cover.filename) }}" class="img-fluid mb-3" alt="Обложка" style="max-width: 200px;">
+{% endif %}
+<p><strong>Автор:</strong> {{ book.author }}</p>
+<p><strong>Год:</strong> {{ book.year }}</p>
+<p><strong>Издательство:</strong> {{ book.publisher }}</p>
+<p><strong>Страниц:</strong> {{ book.pages }}</p>
+<p><strong>Жанры:</strong> {{ book.genres | map(attribute='name') | join(', ') }}</p>
+<div><strong>Описание:</strong> {{ book.description | markdown_to_html | safe }}</div>
+
+{% if current_user.is_authenticated and (current_user.role.name == 'Администратор' or current_user.role.name == 'Модератор') %}
+  <a href="{{ url_for('edit_book', book_id=book.id) }}" class="btn btn-warning">Редактировать</a>
+{% endif %}
+
+{% if current_user.is_authenticated and current_user.role.name == 'Администратор' %}
+  <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ book.id }}">Удалить</button>
+  <!-- Модальное окно для подтверждения удаления -->
+  <div class="modal fade" id="deleteModal{{ book.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ book.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel{{ book.id }}">Удаление книги</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          Вы уверены, что хотите удалить книгу "{{ book.title }}"?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button>
+          <form method="POST" action="{{ url_for('delete_book', book_id=book.id) }}">
+            <button type="submit" class="btn btn-danger">Да</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<hr>
+<h4>Рецензии</h4>
+{% if reviews %}
+  {% for review in reviews %}
+    <div class="border p-2 mb-3">
+      <strong>{{ review.user.username }}</strong> ({{ review.timestamp.strftime('%Y-%m-%d %H:%M') }}) — Оценка: {{ review.rating }}
+      <p>{{ review.text | markdown_to_html | safe }}</p>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>Пока нет рецензий.</p>
+{% endif %}
+
+{% if current_user.is_authenticated and not user_review %}
+<h3 class="mt-5">Оставить рецензию</h3>
+<a href="{{ url_for('add_review', book_id=book.id) }}" class="btn btn-primary">Написать рецензию</a>
+{% elif user_review %}
+  <h3 class="mt-5">Ваша рецензия</h3>
+  <div class="border p-2 mb-3">
+    <strong>{{ user_review.user.username }}</strong> ({{ user_review.timestamp.strftime('%Y-%m-%d %H:%M') }}) — Оценка: {{ user_review.rating }}
+    <p>{{ user_review.text | markdown_to_html | safe }}</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+{% endblock %}
